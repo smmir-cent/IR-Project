@@ -72,14 +72,14 @@ def preprocessing():
 
 def merging(pl1,pl2):
     counter_1, counter_2 = 0, 0
-    size_1, size_2 = len(pl1), len(pl1)
+    size_1, size_2 = len(pl1), len(pl2)
     res = []
     while counter_1 < size_1 and counter_2 < size_2:
         if pl1[counter_1] == pl2[counter_2]:
             res.append(pl1[counter_1])
             counter_1 += 1
             counter_2 += 1
-        if pl1[counter_1] < pl2[counter_2]:
+        elif pl1[counter_1] < pl2[counter_2]:
             counter_1 += 1
         else:
             counter_2 += 1
@@ -156,25 +156,36 @@ def queryProcessing(query):
 
     ### and_terms ###
     tokens = list(dict.fromkeys(tokens))
-    final_res = list(tokens[0]["occurrence"].keys())
+    print("tokens")
+    print(tokens)
+    final_res = list(pos_index[tokens[0]][1].keys())
+    print("final_res[0]")
+    print(final_res)
+    print("final_res[1]")
+    print(list(pos_index[tokens[1]][1].keys()))
+
     i = 1
     while  i < len(tokens):
-        final_res = merging(final_res,list(tokens[i]["occurrence"].keys()))
+        final_res = merging(final_res,list(pos_index[tokens[i]][1].keys()))
+        i += 1
+    print("final_res")
+    print(final_res)
+    print("final_res")
     ### /and_terms ###
 
-    ### not_terms ###
-    not_res = []
-    not_terms = list(dict.fromkeys(not_terms))
-    not_res = list(not_terms[0]["occurrence"].keys())
-    i = 1
-    while  i < len(not_terms):
-        not_res = merging(not_res,list(not_terms[i]["occurrence"].keys()))    
-    ### /not_terms ###
+    # ### not_terms ###
+    # not_res = []
+    # not_terms = list(dict.fromkeys(not_terms))
+    # not_res = list(not_terms[0]["occurrence"].keys())
+    # i = 1
+    # while  i < len(not_terms):
+    #     not_res = merging(not_res,list(not_terms[i]["occurrence"].keys()))    
+    # ### /not_terms ###
 
-    ### phrases ###
-    execPhrases(phrases=phrases)
-    ## todo: check position
-    ### /phrases ###
+    # ### phrases ###
+    # execPhrases(phrases=phrases)
+    # ## todo: check position
+    # ### /phrases ###
 
 
     ######### /preprocessing #########
@@ -189,5 +200,5 @@ if __name__ == "__main__":
     readData()
     # preprocessing()
     loadIndex()
-    # query = input('your query: ')
-    # queryProcessing(query)
+    query = input('your query: ')
+    queryProcessing(query)
