@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 from hazm import *
 import time
@@ -155,38 +156,37 @@ def queryProcessing(query):
         print(item)
 
     ### and_terms ###
-    tokens = list(dict.fromkeys(tokens))
-    print("tokens")
-    print(tokens)
-    final_res = list(pos_index[tokens[0]][1].keys())
-    print("final_res[0]")
-    print(final_res)
-    print("final_res[1]")
-    print(list(pos_index[tokens[1]][1].keys()))
+    try:
+        tokens = list(dict.fromkeys(tokens))
+        final_res = list(pos_index[tokens[0]][1].keys())
 
-    i = 1
-    while  i < len(tokens):
-        final_res = merging(final_res,list(pos_index[tokens[i]][1].keys()))
-        i += 1
-    print("final_res")
+        i = 1
+        while  i < len(tokens):
+            final_res = merging(final_res,list(pos_index[tokens[i]][1].keys()))
+            i += 1
+    except:
+        final_res = []
     print(final_res)
-    print("final_res")
     ### /and_terms ###
 
-    # ### not_terms ###
-    # not_res = []
-    # not_terms = list(dict.fromkeys(not_terms))
-    # not_res = list(not_terms[0]["occurrence"].keys())
-    # i = 1
-    # while  i < len(not_terms):
-    #     not_res = merging(not_res,list(not_terms[i]["occurrence"].keys()))    
-    # ### /not_terms ###
 
     # ### phrases ###
     # execPhrases(phrases=phrases)
     # ## todo: check position
     # ### /phrases ###
 
+    ### not_terms ###
+    not_terms = list(dict.fromkeys(not_terms))
+    if len(final_res) != 0:
+        for doc in deepcopy(final_res):
+            for term in not_terms:
+                if doc in list(pos_index[term][1].keys()):
+                    print(doc)
+                    final_res.remove(doc)  
+    print("not_res")  
+    print(final_res)  
+    ## extract not from result
+    ### /not_terms ###
 
     ######### /preprocessing #########
 
