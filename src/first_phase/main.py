@@ -19,13 +19,14 @@ stemmer = Stemmer()
 json_object = None
 json_object_size = 12201
 stopwords = []
+all_terms = []
 pos_index = {}
 
 
 def readData():
     global json_object
-    # with open("assets\IR_data_news_12k.json", "r") as read_file:
-    #     json_object = json.load(read_file)
+    with open("assets\IR_data_news_12k.json", "r") as read_file:
+        json_object = json.load(read_file)
     # docs = pd.read_json('assets\IR_data_news_12k.json', encoding='utf-8')
     # docs_contents = docs.T['content']
     # docs_titles = docs.T['title']
@@ -62,7 +63,6 @@ def preprocessing():
                     pos_index[term][0] = pos_index[term][0] + 1
                     if i in pos_index[term][1]:
                         pos_index[term][1][i].append(position)
-                         
                     else:
                         pos_index[term][1][i] = [position]                    
                     
@@ -116,13 +116,31 @@ def checkSeq(l1,l2):
     # res = res + l1[counter_1:] + l2[counter_2:]
     return state
 
-
+def ranking(all_terms,final_res):
+    ranks = {}
+    display_pos = {}
+    for docid in final_res:
+        ranks[docid] = 0
+        display_pos[docid] = []
+    # print("all_terms")
+    # print(all_terms)
+    # print("###########################")
+    # print(pos_index[all_terms[0]][1])
+    # print("###########################")
+    # print(pos_index[all_terms[1]][1])
+    for term in all_terms:
+        for docid in final_res:
+            ranks[docid] += len(pos_index[term][1][docid])
+            display_pos[docid].append(int(sum(pos_index[term][1][docid])/len(pos_index[term][1][docid])))
+    # print(ranks)
+    return sorted(ranks, key=ranks.get, reverse=True)[:5],display_pos
 
 
 def execPhrases(phrases):
+    global all_terms
     phrase_result = []
     first_phrase = True
-    print(phrases)
+    # print(phrases)
     for phrase in phrases:
         norm = normalizer.normalize(phrase)
         tokens = word_tokenize(norm)
@@ -142,7 +160,7 @@ def execPhrases(phrases):
                 i += 1
         except:
             docid_candidates = []
-
+        all_terms.extend(tokens)
         # print("docid_candidates")
         # print(docid_candidates) ### ok:6929
         # print("/docid_candidates")
@@ -164,6 +182,7 @@ def execPhrases(phrases):
 
 
 def queryProcessing(query):
+    global all_terms
     ######### preprocessing #########
     phrases = re.findall('"([^"]*)"', query)
     terms = re.sub('"([^"]*)"', '', query)
@@ -211,6 +230,7 @@ def queryProcessing(query):
     print("######### and_terms #########")  
     print(final_res)
     ### /and_terms ###
+    all_terms.extend(tokens)
 
 
     # ### phrases ###
@@ -241,8 +261,38 @@ def queryProcessing(query):
     ### /not_terms ###
 
     ######### /preprocessing #########
-    ##### ranking : todo ####
-    
+
+    ranked_doc,display_pos = ranking(all_terms=all_terms,final_res=final_res)
+    f = open("result.txt", "w", encoding='utf-8')
+    for i,doc in enumerate(ranked_doc):
+        display_center = int(sum(display_pos[doc])/len(display_pos[doc]))
+        url = json_object[str(doc)]['url']
+        title = json_object[str(doc)]['title']
+        content = json_object[str(doc)]['content']
+        norm = normalizer.normalize(content)
+        tokens = word_tokenize(norm)
+        counter = 0
+        index = 0
+        thr = 0
+        while counter < len(tokens):
+            index+=(len(tokens[counter]))
+            if tokens[counter] not in stopwords:
+                stemming = stemmer.stem(item)
+                tokens[counter] = stemming
+                thr += 1
+            else:
+                tokens[counter] = ''
+            if thr > display_center:
+                break
+            counter += 1
+        f.write(str(i+1)+") \n\n")
+        f.write("title:  "+title+"\n\n")
+        f.write("url:  "+url+"\n\n")
+        f.write(content[index-50:index+50]+"\n\n")
+        f.write("############################################\n\n")
+    f.close()
+
+
 
 def loadStopwords():
     global stopwords
@@ -255,7 +305,7 @@ def loadStopwords():
 
 if __name__ == "__main__":
     loadStopwords()
-    # readData()
+    readData()
     # preprocessing()
     loadIndex()
     while True:
