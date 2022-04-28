@@ -5,6 +5,7 @@ import time
 import re
 import pickle
 from hazm import *
+from collections import Counter
 
 
 def loadIndex():
@@ -99,6 +100,10 @@ def merging(pl1,pl2):
     return res
 
 
+def softMerging(pl1,pl2):
+    print("soft_merging")
+    pl1.extend(pl2)
+    return pl1
 
 def checkSeq(l1,l2):
     counter_1, counter_2 = 0, 0
@@ -130,8 +135,9 @@ def ranking(all_terms,final_res):
     # print(pos_index[all_terms[1]][1])
     for term in all_terms:
         for docid in final_res:
-            ranks[docid] += len(pos_index[term][1][docid])
-            display_pos[docid].append(int(sum(pos_index[term][1][docid])/len(pos_index[term][1][docid])))
+            if docid in pos_index[term][1]:
+                ranks[docid] += len(pos_index[term][1][docid])
+                display_pos[docid].append(int(sum(pos_index[term][1][docid])/len(pos_index[term][1][docid])))
     # print(ranks)
     return sorted(ranks, key=ranks.get, reverse=True)[:5],display_pos
 
@@ -221,13 +227,28 @@ def queryProcessing(query):
     try:
         tokens = list(dict.fromkeys(tokens))
         final_res = list(pos_index[tokens[0]][1].keys())
+        print("final_res")
+        print(final_res)
+
         i = 1
         while  i < len(tokens):
-            final_res = merging(final_res,list(pos_index[tokens[i]][1].keys()))
+            final_res = softMerging(final_res,list(pos_index[tokens[i]][1].keys()))
+            print("$^#$^")
+            print(final_res)
+
             i += 1
     except:
+        print("-*-*-*-*")
         final_res = []
     print("######### and_terms #########")  
+    print(final_res)
+    z = Counter(final_res)
+    print(z)
+    final_res = []
+    for key in z:
+        if z[key] > len(tokens) - 2:
+            final_res.append(key)
+    final_res = sorted(final_res)
     print(final_res)
     ### /and_terms ###
     all_terms.extend(tokens)
@@ -288,7 +309,7 @@ def queryProcessing(query):
         f.write(str(i+1)+") \n\n")
         f.write("title:  "+title+"\n\n")
         f.write("url:  "+url+"\n\n")
-        f.write(content[index-50:index+50]+"\n\n")
+        f.write(content[index-100:index+100]+"\n\n")
         f.write("############################################\n\n")
     f.close()
 
