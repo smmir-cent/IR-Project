@@ -1,12 +1,31 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
 import json
+import math
 import time
 import re
 import pickle
 from hazm import *
 from collections import Counter
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import numpy as np
 
+STOPWORDS = True
+STEMMING = True
+
+dict_size = 0
+token_size = 0
+normalizer =  Normalizer()
+stemmer = Stemmer()
+json_object = None
+json_object_size = 12201
+stopwords = []
+all_terms = []
+token_size_heaps_points = []
+dict_size_heaps_points = []
+pos_index = {}
+heaps_points = [500, 1000, 1500, 2000, json_object_size]
 
 def loadIndex():
     global pos_index
@@ -15,13 +34,6 @@ def loadIndex():
     f.close()
     # print(json.dumps(pos_index, sort_keys=False, indent=4))
 
-normalizer =  Normalizer()
-stemmer = Stemmer()
-json_object = None
-json_object_size = 12201
-stopwords = []
-all_terms = []
-pos_index = {}
 
 
 def readData():
@@ -31,7 +43,7 @@ def readData():
 
 
 def preprocessing():
-    global pos_index,json_object,stopwords,json_object_size
+    global pos_index,json_object,stopwords,json_object_size,dict_size,token_size,token_size_heaps_points,dict_size_heaps_points,STOPWORDS,STEMMING
     start_time = time.time()
     for i in range(0,json_object_size):
         # print(i)
@@ -40,8 +52,10 @@ def preprocessing():
         tokens = word_tokenize(norm)
         position = 0
         for term in tokens:
-            if term not in stopwords:
-                term = stemmer.stem(term)
+            if (not STOPWORDS) or (term not in stopwords):
+                if STEMMING:
+                    term = stemmer.stem(term)
+                token_size += 1
                 if term in pos_index:
                     pos_index[term][0] = pos_index[term][0] + 1
                     if i in pos_index[term][1]:
@@ -54,14 +68,19 @@ def preprocessing():
                    pos_index[term].append(1)
                    pos_index[term].append({})     
                    pos_index[term][1][i] = [position]
+                   dict_size += 1
                 position += 1
-                
+        if i+1 in heaps_points:
+            dict_size_heaps_points.append(math.log10(dict_size))
+            token_size_heaps_points.append(math.log10(token_size))
+
 
     end_time = time.time()
     print(f'index creation time: {end_time-start_time}')
-    f = open("assets\index.dat", "wb")
-    pickle.dump(pos_index, f)
-    f.close()
+    if STOPWORDS:
+        f = open("assets\index.dat", "wb")
+        pickle.dump(pos_index, f)
+        f.close()
 
 
 def merging(pl1,pl2):
@@ -279,16 +298,62 @@ def loadStopwords():
 
 
 def zipf():
-    pass
+    global pos_index
+    sorted_pos_index = {k: v for k, v in sorted(pos_index.items(), key=lambda item: item[1][0], reverse=True)}
+    # print(sorted_pos_index)
+    key_list = list(sorted_pos_index.keys())
+    all_frequency_list = [x[0] for x in sorted_pos_index.values()]
+    max_frequency = all_frequency_list[0]
+    cf_real = [math.log10(i) for i in all_frequency_list]
+    rank = [math.log10(i + 1) for i in range(len(key_list))]
+    cf_expected = [math.log10(max_frequency / (i + 1)) for i in range(len(key_list))]
+    if STOPWORDS:
+        plt.title('removing stopwords')
+    else:
+        plt.title('with stopwords')
+    plt.plot(rank, cf_expected)
+    plt.plot(rank, cf_real)
+    plt.legend(["expected", "real"])
+    plt.xlabel("log10 Rank")
+    plt.ylabel("log10 cf")
+    plt.show()
+
+
+def curveFitting(logT, b, logK):
+    return b * logT + logK
+
 
 def heaps():
-    pass
+    global token_size_heaps_points,dict_size_heaps_points
+    popt, _ = curve_fit(curveFitting, token_size_heaps_points[0:4], dict_size_heaps_points[0:4])
+    b, logK = popt
+    b = float(format(b, ".5f"))
+    x = np.linspace(1.8, 7, 100)
+    y = b * x + logK
+    plt.plot(x, y, '--')
+    print(f"expected dict_size(log(M): {b*token_size_heaps_points[4]+logK}")
+    print(f"real dict_size(log(M): {dict_size_heaps_points[4]}")
+    plt.plot(token_size_heaps_points, dict_size_heaps_points)
+    # plt.legend(["expected", "real"])
+    if STEMMING:
+        plt.title('with STEMMING')
+    else:
+        plt.title('without STEMMING')
+    plt.xlabel("log10 T")
+    plt.ylabel("log10 M")
+    plt.show()
+    
+
+
+
 
 if __name__ == "__main__":
     loadStopwords()
     readData()
-    # preprocessing()
-    loadIndex()
+    preprocessing()
+    # loadIndex()
+    # zipf()
+    # heaps()
     while True:
         query = input('your query: ')
         queryProcessing(query)
