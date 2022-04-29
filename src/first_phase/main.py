@@ -28,23 +28,7 @@ def readData():
     global json_object
     with open("assets\IR_data_news_12k.json", "r") as read_file:
         json_object = json.load(read_file)
-    # docs = pd.read_json('assets\IR_data_news_12k.json', encoding='utf-8')
-    # docs_contents = docs.T['content']
-    # docs_titles = docs.T['title']
 
-
-
-    # f = open("temp.txt", "w", encoding='utf-8')
-    # f.write(docs_contents[6929])
-    # f.close()
-
-    # print(docs_contents[6929])
-
-
-
-    # json_object = {}
-    # json_object['0'] = {}
-    # json_object['0']['content'] = "These are short, famous texts in English from classic sources like the Bible or Shakespeare. Some texts have word definitions and explanations to help you. Some of these texts are written in an old style of English. Try to understand them, because the English that we speak today is based on what our great, great, great, great grandparents spoke before! Of course, not all these texts were originally written in English. The Bible, for example, is a translation. But they are all well known in English today, and many of them express beautiful thoughts."
 
 def preprocessing():
     global pos_index,json_object,stopwords,json_object_size
@@ -52,8 +36,6 @@ def preprocessing():
     for i in range(0,json_object_size):
         # print(i)
         content = json_object[str(i)]['content'].replace("\u200c", " ")
-        # url = json_object[str(i)]['url']
-        # title = json_object[str(i)]['title']
         norm = normalizer.normalize(content)
         tokens = word_tokenize(norm)
         position = 0
@@ -77,7 +59,6 @@ def preprocessing():
 
     end_time = time.time()
     print(f'index creation time: {end_time-start_time}')
-    # print(json.dumps(pos_index,indent=4))
     f = open("assets\index.dat", "wb")
     pickle.dump(pos_index, f)
     f.close()
@@ -96,12 +77,10 @@ def merging(pl1,pl2):
             counter_1 += 1
         else:
             counter_2 += 1
-    # res = res + pl1[counter_1:] + pl2[counter_2:]
     return res
 
 
 def softMerging(pl1,pl2):
-    print("soft_merging")
     pl1.extend(pl2)
     return pl1
 
@@ -118,7 +97,6 @@ def checkSeq(l1,l2):
             counter_1 += 1
         else:
             counter_2 += 1
-    # res = res + l1[counter_1:] + l2[counter_2:]
     return state
 
 def ranking(all_terms,final_res):
@@ -127,18 +105,11 @@ def ranking(all_terms,final_res):
     for docid in final_res:
         ranks[docid] = 0
         display_pos[docid] = []
-    # print("all_terms")
-    # print(all_terms)
-    # print("###########################")
-    # print(pos_index[all_terms[0]][1])
-    # print("###########################")
-    # print(pos_index[all_terms[1]][1])
     for term in all_terms:
         for docid in final_res:
             if docid in pos_index[term][1]:
                 ranks[docid] += len(pos_index[term][1][docid])
                 display_pos[docid].append(int(sum(pos_index[term][1][docid])/len(pos_index[term][1][docid])))
-    # print(ranks)
     return sorted(ranks, key=ranks.get, reverse=True)[:5],display_pos
 
 
@@ -146,7 +117,6 @@ def execPhrases(phrases):
     global all_terms
     phrase_result = []
     first_phrase = True
-    # print(phrases)
     for phrase in phrases:
         norm = normalizer.normalize(phrase)
         tokens = word_tokenize(norm)
@@ -167,9 +137,6 @@ def execPhrases(phrases):
         except:
             docid_candidates = []
         all_terms.extend(tokens)
-        # print("docid_candidates")
-        # print(docid_candidates) ### ok:6929
-        # print("/docid_candidates")
         counter = 0
         res = []
         while counter < len(tokens) - 1:
@@ -196,7 +163,6 @@ def queryProcessing(query):
     tokens = word_tokenize(norm)
     _not = False
     not_terms = []
-    # bug: if '!' comes first does not work properly 
     for item in deepcopy(tokens):
         # print(item)
         if item == '!':
@@ -227,39 +193,27 @@ def queryProcessing(query):
     try:
         tokens = list(dict.fromkeys(tokens))
         final_res = list(pos_index[tokens[0]][1].keys())
-        print("final_res")
-        print(final_res)
-
         i = 1
         while  i < len(tokens):
             final_res = softMerging(final_res,list(pos_index[tokens[i]][1].keys()))
-            print("$^#$^")
-            print(final_res)
-
             i += 1
     except:
-        print("-*-*-*-*")
         final_res = []
-    print("######### and_terms #########")  
-    print(final_res)
+    # print("######### and_terms #########")  
     z = Counter(final_res)
-    print(z)
+    # print(z)
     final_res = []
     for key in z:
         if z[key] > len(tokens) - 2:
             final_res.append(key)
     final_res = sorted(final_res)
-    print(final_res)
     ### /and_terms ###
     all_terms.extend(tokens)
-
 
     # ### phrases ###
     phrase_result = []
     if len(phrases) != 0:
         phrase_result = execPhrases(phrases=phrases)
-        print("######### phrase_result #########") 
-        print(phrase_result)
         ## merge phrases and and_terms
         if len(tokens) != 0:
             final_res = sorted(list(set(phrase_result) & set(final_res)))
@@ -274,10 +228,10 @@ def queryProcessing(query):
         for doc in deepcopy(final_res):
             for term in not_terms:
                 if doc in list(pos_index[term][1].keys()):
-                    print(doc)
+                    # print(doc)
                     final_res.remove(doc)  
-    print("######################## final(without ranking) ########################")  
-    print(final_res)  
+    # print("######################## final(without ranking) ########################")  
+    # print(final_res)  
     ## extract not from result
     ### /not_terms ###
 
@@ -323,6 +277,12 @@ def loadStopwords():
         stopwords.append(currentPlace.replace("\u200c", " "))
     textfile.close()        
 
+
+def zipf():
+    pass
+
+def heaps():
+    pass
 
 if __name__ == "__main__":
     loadStopwords()
