@@ -96,8 +96,11 @@ def ranking(all_terms,final_res):
         display_pos[docid] = []
     for term in all_terms:
         for docid in final_res:
-            if docid in pos_index[term][1]:
-                display_pos[docid].append(int(sum(pos_index[term][1][docid])/len(pos_index[term][1][docid])))
+            try:
+                if docid in pos_index[term][1]:
+                    display_pos[docid].append(int(sum(pos_index[term][1][docid])/len(pos_index[term][1][docid])))
+            except:
+                pass
     return sorted(final_res, key=final_res.get, reverse=True)[:5],display_pos
 
 
@@ -136,18 +139,25 @@ def queryProcessing(query):
     ########### calculating tfidf_weights ###########
     docid_candidate = []
     for term in counters.keys():
-        n_t = len(pos_index[term][1])
-        query_tfidf_weights[term] = (1 + math.log10(counters[term])) * math.log10(json_object_size/n_t)
-        docid_candidate = list(set(docid_candidate) | set(champion_lists[term]))
+        try:
+            n_t = len(pos_index[term][1])
+            query_tfidf_weights[term] = (1 + math.log10(counters[term])) * math.log10(json_object_size/n_t)
+            docid_candidate = list(set(docid_candidate) | set(champion_lists[term]))
+        except:
+            n_t = 0
+            query_tfidf_weights[term] = 0
     ########### /calculating tfidf_weights ###########
 
     for term in counters.keys():
-        for docid in tfidf_weights[term]:
-            if docid in docid_candidate:
-                if docid in result_weights:
-                    result_weights[docid] += query_tfidf_weights[term] * tfidf_weights[term][docid]
-                else:
-                    result_weights[docid] = query_tfidf_weights[term] * tfidf_weights[term][docid]
+        try:
+            for docid in tfidf_weights[term]:
+                if docid in docid_candidate:
+                    if docid in result_weights:
+                        result_weights[docid] += query_tfidf_weights[term] * tfidf_weights[term][docid]
+                    else:
+                        result_weights[docid] = query_tfidf_weights[term] * tfidf_weights[term][docid]
+        except:
+            pass
     for docid in result_weights.keys():
          result_weights[docid] /= math.sqrt(documents_length[docid])
     
@@ -160,7 +170,11 @@ def queryProcessing(query):
     print(ranked_doc)
     f = open("result.txt", "w", encoding='utf-8')
     for i,doc in enumerate(ranked_doc):
-        display_center = int(sum(display_pos[doc])/len(display_pos[doc]))
+        if len(display_pos[doc]) == 0:
+            display_center = 0
+        else:    
+            display_center = int(sum(display_pos[doc])/len(display_pos[doc]))
+        print(display_center)
         url = json_object[str(doc)]['url']
         title = json_object[str(doc)]['title']
         content = json_object[str(doc)]['content']
@@ -183,7 +197,7 @@ def queryProcessing(query):
         f.write(str(i+1)+") score "+str(result_weights[doc])+" \n\n")
         f.write("title:  "+title+"\n\n")
         f.write("url:  "+url+"\n\n")
-        f.write(content[index-100:index+100]+"\n\n")
+        f.write(content[max(index-100,0):min(index+100,len(content))]+"\n\n")
         f.write("############################################\n\n")
     f.close()
 
