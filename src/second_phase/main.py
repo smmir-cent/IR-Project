@@ -88,25 +88,9 @@ def preprocessing():
         f.close()
 
 
-def merging(pl1,pl2):
-    counter_1, counter_2 = 0, 0
-    size_1, size_2 = len(pl1), len(pl2)
-    res = []
-    while counter_1 < size_1 and counter_2 < size_2:
-        if pl1[counter_1] == pl2[counter_2]:
-            res.append(pl1[counter_1])
-            counter_1 += 1
-            counter_2 += 1
-        elif pl1[counter_1] < pl2[counter_2]:
-            counter_1 += 1
-        else:
-            counter_2 += 1
-    return res
-
-
 
 def ranking(all_terms,final_res):
-    print(final_res)
+    # print(final_res)
     display_pos = {}
     for docid in final_res:
         display_pos[docid] = []
@@ -150,18 +134,20 @@ def queryProcessing(query):
     # print(counters)
 
     ########### calculating tfidf_weights ###########
-
+    docid_candidate = []
     for term in counters.keys():
         n_t = len(pos_index[term][1])
         query_tfidf_weights[term] = (1 + math.log10(counters[term])) * math.log10(json_object_size/n_t)
+        docid_candidate = list(set(docid_candidate) | set(champion_lists[term]))
     ########### /calculating tfidf_weights ###########
 
     for term in counters.keys():
         for docid in tfidf_weights[term]:
-            if docid in result_weights:
-                result_weights[docid] += query_tfidf_weights[term] * tfidf_weights[term][docid]
-            else:
-                result_weights[docid] = query_tfidf_weights[term] * tfidf_weights[term][docid]
+            if docid in docid_candidate:
+                if docid in result_weights:
+                    result_weights[docid] += query_tfidf_weights[term] * tfidf_weights[term][docid]
+                else:
+                    result_weights[docid] = query_tfidf_weights[term] * tfidf_weights[term][docid]
     for docid in result_weights.keys():
          result_weights[docid] /= math.sqrt(documents_length[docid])
     
@@ -214,8 +200,8 @@ def loadStopwords():
 
 
 def tfidfCal():
-    global pos_index,tfidf_weights,documents_length
-    print("before cal len(pos_index)",len(pos_index))
+    global pos_index,tfidf_weights,documents_length,champion_lists
+    # print("before cal len(pos_index)",len(pos_index))
     for term in pos_index.keys():
         temp = pos_index[term]
         tfidf_weights[term] = {}
@@ -228,7 +214,9 @@ def tfidfCal():
                 documents_length[keys_docs] += tfidf_weights[term][keys_docs]**2
             else:
                 documents_length[keys_docs] = tfidf_weights[term][keys_docs]**2
-    print("after cal len(pos_index)",len(pos_index))
+        ### create and sort tfidf champion_lists
+        champion_lists[term] = sorted(tfidf_weights[term], key=tfidf_weights[term].get, reverse=True)[:75]
+    # print("after cal len(pos_index)",len(pos_index))
 
 
 
